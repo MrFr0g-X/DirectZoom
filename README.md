@@ -28,98 +28,55 @@
   <sub><a href="media/demo.mp4">Watch in 1080p</a></sub>
 </p>
 
-DirectZoom records the cursor separately from the screen, so the cursor can be restyled, smoothed or hidden after recording, and zooms are generated from where you clicked. Record a display, a single window or an area; export to MP4, WebM or GIF.
+Record a display, a window or an area of your screen. DirectZoom keeps the cursor separate from the video, so you can restyle or smooth it afterwards, and it adds zooms where you clicked.
 
 ## Download
 
-From [Releases](https://github.com/MrFr0g-X/DirectZoom/releases/latest):
+Get the latest version from [Releases](https://github.com/MrFr0g-X/DirectZoom/releases/latest):
 
-- **DirectZoom-Setup-x.y.z.exe** installs for your Windows user (no administrator rights needed) and updates itself.
-- **DirectZoom-Portable-x.y.z.exe** runs without installing; it tells you when a new version is out.
+- **Setup**: installs for your Windows user and keeps itself up to date.
+- **Portable**: runs without installing.
 
-Windows may show a SmartScreen notice for new, unsigned apps: choose **More info → Run anyway**.
+Windows may show a SmartScreen notice for new apps. Choose **More info → Run anyway**.
 
 ## Features
 
-**Recording**
+- Screen, window or area recording with system audio, microphone and webcam
+- Automatic zooms that follow your clicks, editable on the timeline
+- Cursor styles, smoothing and click effects
+- Backgrounds, rounded corners, shadows, crop and aspect ratios
+- Multi-track timeline: split, trim, reorder, change speed, and edit camera and audio tracks separately
+- Captions, voiceover, background music and speech cleanup
+- Annotations, blur, webcam bubble, keyboard-shortcut overlay and 3D tilt
+- Export to MP4, WebM or GIF up to 4K at 60 fps, with optional Google Drive upload
+- Light and dark mode
 
-- Display, window (only the window's own content, even when covered) or area capture with Windows Graphics Capture
-- System audio and a chosen microphone (WASAPI), webcam (optional floating preview while recording) and keyboard shortcuts (only key combinations with Ctrl, Alt or Win are saved, never ordinary typing)
-- Cursor position, clicks and keys are timed on the same clock as the video, so everything stays in sync
-- DirectZoom's own windows never appear in the recording
-
-**Editing**
-
-- Automatic zooms from clicks and cursor movement, editable on the timeline; the camera can follow the cursor
-- Cursor styles (macOS, Windows system cursors, minimal, crosshair and themed designs), smoothing, click effects, idle hiding
-- Backgrounds (wallpapers, gradients, colours, images), padding, rounded corners, shadow, crop, aspect ratios
-- Trimming, splitting and per-clip speed (0.25×–4×)
-- Webcam bubble with keyframes, keyboard-shortcut overlay, blur regions, drawn annotations, text-field spotlight
-- 3D tilt effect, motion blur, brand presets
-- Undo and redo for every edit; projects are saved automatically
-
-**Audio and captions**
-
-- Captions with word timing in three styles, editable transcript, `.srt` / `.vtt` import and `.srt` export
-- Voiceover from a script
-- Background music with automatic ducking under speech
-- Speech cleanup: level normalisation, noise removal, filler-word muting or cutting, voice replacement
-
-Captions and voiceover can run on ElevenLabs (with your own API key) or fully offline with whisper.cpp and Piper, downloaded on first use.
-
-**Export and sharing**
-
-- MP4 (H.264 + AAC), WebM (VP9 + Opus) and GIF, rendered frame by frame at up to 4K / 60 fps
-- Upload exports to Google Drive
+Online captions and voiceover use your own ElevenLabs API key. They can also run fully offline.
 
 ## Requirements
 
-- Windows 10 version 2004 or later (Windows 11 recommended), 64-bit
-- To build: Node.js 24, Rust (stable, MSVC toolchain)
+Windows 10 (version 2004 or later) or Windows 11, 64-bit.
 
 ## Building from source
 
+Requires Node.js 24 and Rust.
+
 ```powershell
 npm install
-npm run native              # builds the capture helper (native/dzcap)
-npm run build               # type-checks and bundles the interface
-npm run desktop             # runs the app
-npm test                    # unit tests
-npm run package             # release/: DirectZoom-Setup-<version>.exe, DirectZoom-Portable-<version>.exe, latest.yml
+npm run native
+npm run desktop
 ```
 
-## Optional services
-
-**ElevenLabs.** Online captions, voiceover, noise isolation and voice replacement use your ElevenLabs API key. Enter it under Settings on the home screen, which also shows your plan and remaining credits. The key is stored encrypted for your Windows account and is only sent to ElevenLabs. Errors such as running out of credits, a key without the right permissions or an unavailable voice are explained in plain language with a link to fix them.
-
-**Google Drive.** Uploads need an OAuth client of type *Desktop app* from a Google Cloud project with the Google Drive API enabled. Either place the downloaded JSON at `build/google-client.json` before packaging (it is bundled into the build and ignored by git), or choose it in the app under Settings → Google Drive. DirectZoom requests the `drive.file` scope, so it can only see files it uploads. Exports go into a `DirectZoom` folder.
-
-**Updates.** The installed version checks [GitHub Releases](https://github.com/MrFr0g-X/DirectZoom/releases) at startup and every few hours, downloads new versions in the background (verified with SHA-512) and installs them on restart. The portable version shows when a new release is available.
-
-## Project layout
-
-```
-electron/          main process: windows, IPC, projects, export muxing, services
-native/dzcap/      Rust capture helper (video, audio, cursor, keys, text focus)
-src/               renderer: compositor, motion, captions, timeline and the interface (src/ui)
-tests/             unit tests (node:test)
-scripts/           build and packaging helpers
-media/             README demo; media/demo/index.html is its source (npm run demo renders it)
-docs/              website (GitHub Pages): home, privacy policy, terms
-```
-
-Recordings are stored in `%APPDATA%\directzoom\recordings`, one folder per project with the video, audio tracks and JSON files for cursor, keys, zooms, clips and settings.
+Google Drive upload in your own build needs a Google OAuth client ("Desktop app"), added under Settings → Google Drive.
 
 ## Privacy
 
-Recordings, projects and settings stay on your computer. Data leaves it only when you use an online feature: audio sent to ElevenLabs for captions or speech processing, scripts sent for voiceover, files you choose to upload to Google Drive, and update checks against the source you configure. See the full [privacy policy](https://hothifa.is-a.dev/DirectZoom/privacy.html) and [terms of service](https://hothifa.is-a.dev/DirectZoom/terms.html).
-
-The website lives in `docs/` and is published with GitHub Pages.
+Your recordings and settings stay on your computer. Data is only sent when you use an online feature, such as ElevenLabs captions or a Google Drive upload. See the [privacy policy](https://hothifa.is-a.dev/DirectZoom/privacy.html) and [terms](https://hothifa.is-a.dev/DirectZoom/terms.html).
 
 ## Contact
 
-Questions and bug reports: [h@hothifa.tech](mailto:h@hothifa.tech). Help → Save diagnostics creates a report file you can attach.
+[h@hothifa.tech](mailto:h@hothifa.tech)
 
 ## License
 
-[MIT](LICENSE). Bundled third-party components (Electron, FFmpeg, whisper.cpp, Piper and others) keep their own licenses.
+[MIT](LICENSE). Bundled third-party components keep their own licenses ([notices](THIRD-PARTY-NOTICES.md)).
