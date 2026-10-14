@@ -1,0 +1,126 @@
+{
+  "name": "directzoom",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DirectZoom Windows screen recorder and editor",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "desktop": "electron .",
+    "build": "tsc --noEmit && vite build",
+    "test": "node --test tests/*.test.mjs",
+    "package:dir": "npm run build && electron-builder --win dir && node scripts/verify-package.mjs",
+    "native": "cargo build --release --manifest-path native/dzcap/Cargo.toml",
+    "dev:desktop": "set DIRECTZOOM_DEV=1&& electron .",
+    "icon": "electron scripts/render-svg.cjs build/icon.svg build/icon.png 512 && electron scripts/render-svg.cjs build/icon.svg electron/icon.png 256 && node scripts/make-ico.mjs",
+    "package": "npm run build && electron-builder --win --publish never && node scripts/verify-package.mjs",
+    "demo": "electron scripts/render-demo.cjs"
+  },
+  "build": {
+    "appId": "com.directzoom.desktop",
+    "productName": "DirectZoom",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "electron/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "DirectZoom",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "DirectZoom-Setup-${version}.${ext}",
+      "uninstallDisplayName": "DirectZoom"
+    },
+    "extraResources": [
+      {
+        "from": "native/dzcap/target/release/dzcap.exe",
+        "to": "dzcap.exe"
+      },
+      {
+        "from": "build",
+        "to": ".",
+        "filter": [
+          "google-client.json"
+        ]
+      },
+      {
+        "from": "THIRD-PARTY-NOTICES.md",
+        "to": "THIRD-PARTY-NOTICES.md"
+      },
+      {
+        "from": "LICENSE",
+        "to": "LICENSE.txt"
+      }
+    ],
+    "portable": {
+      "artifactName": "DirectZoom-Portable-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "MrFr0g-X",
+        "repo": "DirectZoom",
+        "releaseType": "draft"
+      }
+    ],
+    "copyright": "Copyright © 2026 MrFr0g-X",
+    "electronLanguages": [
+      "en-US"
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "6.8.10",
+    "ffmpeg-static": "^5.3.0"
+  },
+  "devDependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/outfit": "^5.3.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "electron": "44.7.2",
+    "electron-builder": "^26.15.3",
+    "lucide-react": "^1.47.0",
+    "mp4-muxer": "^5.2.2",
+    "mp4box": "^2.4.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "MrFr0g-X",
+    "email": "h@hothifa.tech",
+    "url": "https://github.com/MrFr0g-X"
+  },
+  "homepage": "https://hothifa.is-a.dev/DirectZoom/"
+}

@@ -1,0 +1,80 @@
+name: Release
+
+# Push a version tag (for example `npm version patch && git push --follow-tags`) to build the
+# setup and portable executables and attach them to a draft GitHub release. Publishing the draft
+# makes it the update that installed copies download.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Rust (rustup ships with the runner)
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+
+      - name: Check the tag matches package.json
+        shell: bash
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build the capture helper
+        run: npm run native
+
+      - name: Add the Google Drive OAuth client
+        shell: bash
+        env:
+          GOOGLE_CLIENT_JSON: ${{ secrets.GOOGLE_CLIENT_JSON }}
+        run: |
+          if [ -n "$GOOGLE_CLIENT_JSON" ]; then
+            printf '%s' "$GOOGLE_CLIENT_JSON" > build/google-client.json
+          else
+            echo "::warning::GOOGLE_CLIENT_JSON is not set; this build has no Google Drive upload."
+          fi
+
+      # Create the draft first: electron-builder publishes each target (setup, portable) in parallel,
+      # and without an existing release each one creates its own.
+      - name: Create the draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --draft --title "DirectZoom ${GITHUB_REF_NAME#v}" --generate-notes
+
+      - name: Build and publish to the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run build
+          npx electron-builder --win --publish always
+          node scripts/verify-package.mjs
+
+      - name: Remove the OAuth client from the workspace
+        if: always()
+        shell: bash
+        run: rm -f build/google-client.json

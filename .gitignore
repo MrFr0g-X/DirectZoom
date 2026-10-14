@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.log
+release/
+release-update/
+release-test/
+native/dzcap/target/
+# Google OAuth client for Drive uploads (bundled into builds, never committed)
+build/google-client.json
+# Local scratch artifacts
+/*.png
+/*.webm

@@ -1,0 +1,399 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>DirectZoom demo</title>
+<!--
+  README demo animation. Every frame is a pure function of time: render(t) in seconds.
+  Render it with: npm run demo   (scripts/render-demo.cjs → media/demo.mp4, media/demo.gif)
+  Open this file in a browser to preview it playing in real time.
+-->
+<style>
+  @font-face { font-family: Outfit; font-weight: 400; src: url('../../node_modules/@fontsource/outfit/files/outfit-latin-400-normal.woff2'); }
+  @font-face { font-family: Outfit; font-weight: 500; src: url('../../node_modules/@fontsource/outfit/files/outfit-latin-500-normal.woff2'); }
+  @font-face { font-family: Outfit; font-weight: 600; src: url('../../node_modules/@fontsource/outfit/files/outfit-latin-600-normal.woff2'); }
+  @font-face { font-family: Outfit; font-weight: 700; src: url('../../node_modules/@fontsource/outfit/files/outfit-latin-700-normal.woff2'); }
+  @font-face { font-family: Mono; font-weight: 500; src: url('../../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2'); }
+
+  :root { --bg: #07080b; --card: #101218; --line: rgba(255,255,255,.08); --text: #f2f3f5; --muted: #8a8f9b; --blue: #0a84ff; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 100%; height: 100%; background: var(--bg); overflow: hidden; }
+  body { font-family: Outfit, 'Segoe UI', sans-serif; color: var(--text); }
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; background: var(--bg); }
+  .abs { position: absolute; }
+
+  /* Ambient background */
+  #glow1, #glow2 { width: 1400px; height: 1400px; border-radius: 50%; filter: blur(40px); }
+  #glow1 { background: radial-gradient(circle, rgba(10,132,255,.22), transparent 62%); }
+  #glow2 { background: radial-gradient(circle, rgba(94,92,230,.18), transparent 62%); }
+  #grid { inset: 0; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px); background-size: 64px 64px; mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%); }
+
+  /* Intro */
+  #intro { left: 0; top: 0; width: 1920px; height: 1080px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #logo { width: 220px; height: 220px; filter: drop-shadow(0 30px 80px rgba(10,132,255,.55)); }
+  #word { font-size: 112px; font-weight: 700; letter-spacing: -0.035em; margin-top: 26px; display: flex; }
+  #word span { display: inline-block; }
+  #tag { font-size: 38px; color: var(--muted); margin-top: 10px; font-weight: 400; }
+  #free { margin-top: 22px; padding: 10px 22px; border-radius: 999px; background: rgba(48, 209, 88, 0.12); border: 1px solid rgba(48, 209, 88, 0.45); color: #7ee2a0; font-size: 26px; font-weight: 600; }
+
+  /* Opening: paid screen recorders (generic, blurred tiles) get crossed out */
+  #paywall { left: 0; top: 0; width: 1920px; height: 1080px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #pwTitle { font-size: 76px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 70px; }
+  #pwStop { position: absolute; top: 50%; left: 0; right: 0; text-align: center; transform: translateY(-50%); font-size: 132px; font-weight: 700; letter-spacing: -0.04em; }
+  #pwApps { display: flex; gap: 46px; }
+  .pw-app { display: flex; flex-direction: column; align-items: center; gap: 26px; }
+  .pw-icon { width: 170px; height: 170px; border-radius: 40px; filter: blur(16px) saturate(1.2); position: relative; overflow: hidden; }
+  .pw-icon i { position: absolute; inset: 0; display: grid; place-items: center; }
+  .pw-price { position: relative; padding: 10px 22px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.14); font-size: 30px; font-weight: 600; font-family: Mono, monospace; color: #e6e7ea; }
+  .pw-strike { position: absolute; left: -8px; top: 50%; height: 5px; border-radius: 3px; background: #ff453a; box-shadow: 0 0 18px rgba(255, 69, 58, 0.8); transform-origin: left center; }
+
+  /* The "export": wallpaper, padding, rounded screen, shadow */
+  #frame { left: 210px; top: 118px; width: 1500px; height: 844px; border-radius: 34px; overflow: hidden;
+    background: radial-gradient(120% 90% at 0% 0%, #3d8bff 0%, transparent 55%), radial-gradient(90% 90% at 100% 100%, #8b5cf6 0%, transparent 55%), linear-gradient(135deg, #1d4ed8, #4c1d95);
+    box-shadow: 0 50px 140px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08); transform-origin: 50% 50%; }
+  #screen { left: 56px; top: 32px; width: 1388px; height: 780px; border-radius: 18px; overflow: hidden; background: #f6f7fb;
+    box-shadow: 0 30px 70px rgba(10, 10, 40, .45); }
+  #content { left: 0; top: 0; width: 1600px; height: 900px; transform-origin: 0 0; }
+
+  /* Mock app */
+  .chrome { left: 0; top: 0; width: 1600px; height: 56px; background: #fff; border-bottom: 1px solid #e7e9f0; display: flex; align-items: center; padding: 0 22px; gap: 10px; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; }
+  .url { margin-left: 30px; height: 32px; width: 520px; border-radius: 10px; background: #f1f3f8; color: #7a8091; font-size: 16px; display: flex; align-items: center; padding: 0 14px; font-family: Mono, monospace; }
+  .side { left: 0; top: 56px; width: 250px; height: 844px; background: #fff; border-right: 1px solid #e7e9f0; padding: 26px 18px; }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 22px; color: #111827; margin-bottom: 30px; }
+  .brand i { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #f97316, #ec4899); display: block; }
+  .nav { height: 46px; border-radius: 12px; display: flex; align-items: center; padding: 0 14px; gap: 12px; color: #5b6172; font-size: 18px; font-weight: 500; }
+  .nav.on { background: #eef4ff; color: #1d4ed8; }
+  .nav b { width: 18px; height: 18px; border-radius: 5px; background: currentColor; opacity: .35; display: block; }
+  .main { left: 250px; top: 56px; width: 1350px; height: 844px; padding: 36px 44px; color: #111827; }
+  .h1 { font-size: 36px; font-weight: 700; letter-spacing: -0.01em; }
+  .sub { font-size: 18px; color: #6b7280; margin-top: 4px; }
+  #share { left: 1123px; top: 40px; width: 186px; height: 52px; border-radius: 14px; background: #111827; color: #fff; font-size: 19px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; transform-origin: 50% 50%; }
+  .cards { left: 44px; top: 132px; display: flex; gap: 22px; }
+  .card { width: 405px; height: 150px; background: #fff; border-radius: 20px; border: 1px solid #e7e9f0; padding: 22px 26px; }
+  .card .k { font-size: 17px; color: #6b7280; }
+  .card .v { font-size: 40px; font-weight: 700; margin-top: 8px; letter-spacing: -0.02em; }
+  .card .d { font-size: 16px; color: #16a34a; font-weight: 600; margin-top: 2px; }
+  .chart { left: 44px; top: 306px; width: 1259px; height: 470px; background: #fff; border-radius: 20px; border: 1px solid #e7e9f0; padding: 24px 28px; }
+  #tip { width: 190px; padding: 12px 16px; border-radius: 14px; background: #111827; color: #fff; font-size: 17px; box-shadow: 0 16px 40px rgba(17,24,39,.3); }
+  #tip b { font-size: 24px; display: block; }
+  #toast { left: 1060px; top: 800px; height: 60px; padding: 0 22px; border-radius: 16px; background: #111827; color: #fff; font-size: 19px; font-weight: 500; display: flex; align-items: center; gap: 12px; box-shadow: 0 18px 44px rgba(17,24,39,.35); }
+  #toast i { width: 26px; height: 26px; border-radius: 50%; background: #22c55e; display: grid; place-items: center; font-style: normal; font-size: 16px; }
+
+  /* Cursor, click ripple */
+  #cursor { left: 0; top: 0; width: 34px; height: 50px; transform-origin: 2px 2px; filter: drop-shadow(0 4px 6px rgba(0,0,0,.35)); }
+  #ripple { width: 90px; height: 90px; border-radius: 50%; border: 4px solid rgba(10,132,255,.9); background: rgba(10,132,255,.15); }
+
+  /* Captions and webcam */
+  #captions { left: 50%; bottom: 58px; transform: translateX(-50%); padding: 14px 26px; border-radius: 18px; background: rgba(7,8,11,.78); backdrop-filter: blur(10px);
+    font-size: 36px; font-weight: 600; white-space: nowrap; display: flex; gap: 12px; }
+  #captions span { transition: none; }
+  #cam { right: 96px; bottom: 82px; width: 170px; height: 170px; border-radius: 50%; overflow: hidden; border: 5px solid #fff; box-shadow: 0 18px 50px rgba(0,0,0,.45);
+    background: radial-gradient(circle at 50% 38%, #fcd9b8 0 19%, transparent 19.5%), radial-gradient(circle at 50% 108%, #2563eb 0 45%, transparent 45.5%), linear-gradient(160deg, #c7d2fe, #a5b4fc); }
+
+  /* Features */
+  #features { left: 1060px; top: 210px; width: 760px; }
+  .feat { position: absolute; width: 360px; height: 150px; border-radius: 22px; background: var(--card); border: 1px solid var(--line); padding: 24px 26px; }
+  .feat svg { width: 34px; height: 34px; color: var(--blue); }
+  .feat h3 { font-size: 26px; font-weight: 600; margin-top: 14px; letter-spacing: -0.01em; }
+  .feat p { font-size: 18px; color: var(--muted); margin-top: 2px; }
+  #ftitle { left: 1060px; top: 120px; font-size: 46px; font-weight: 700; letter-spacing: -0.02em; }
+
+  /* End card */
+  #end { left: 0; top: 0; width: 1920px; height: 1080px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #end img { width: 170px; height: 170px; filter: drop-shadow(0 26px 70px rgba(10,132,255,.5)); }
+  #end h2 { font-size: 92px; font-weight: 700; letter-spacing: -0.035em; margin-top: 22px; }
+  #end p { font-size: 34px; color: var(--muted); margin-top: 4px; }
+  #end .pill { margin-top: 34px; padding: 16px 30px; border-radius: 999px; background: rgba(10,132,255,.14); border: 1px solid rgba(10,132,255,.4); color: #8cc4ff; font-family: Mono, monospace; font-size: 26px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow1" class="abs"></div>
+  <div id="glow2" class="abs"></div>
+  <div id="grid" class="abs"></div>
+
+  <div id="paywall" class="abs">
+    <div id="pwTitle">Still paying for a screen recorder?</div>
+    <div id="pwApps"></div>
+  </div>
+  <div id="pwStop" class="abs">Stop paying.</div>
+
+  <div id="intro" class="abs">
+    <img id="logo" src="../../build/icon.png" alt="">
+    <div id="word"></div>
+    <div id="tag">Screen recordings that look edited.</div>
+    <div id="free">Free and open source</div>
+  </div>
+
+  <div id="frame" class="abs">
+    <div id="screen" class="abs">
+      <div id="content" class="abs">
+        <div class="chrome abs"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span class="url">app.northwind.io/analytics</span></div>
+        <div class="side abs">
+          <div class="brand"><i></i>Northwind</div>
+          <div class="nav on"><b></b>Overview</div><div class="nav"><b></b>Audience</div><div class="nav"><b></b>Campaigns</div><div class="nav"><b></b>Revenue</div><div class="nav"><b></b>Settings</div>
+        </div>
+        <div class="main abs">
+          <div class="h1">Overview</div><div class="sub">Last 12 months</div>
+          <div id="share" class="abs"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v14"/></svg>Share report</div>
+          <div class="cards abs">
+            <div class="card"><div class="k">Visitors</div><div class="v">184,203</div><div class="d">+12.4%</div></div>
+            <div class="card"><div class="k">Conversion</div><div class="v">4.82%</div><div class="d">+0.6%</div></div>
+            <div class="card"><div class="k">Revenue</div><div class="v">$92,410</div><div class="d">+18.1%</div></div>
+          </div>
+          <div class="chart abs">
+            <div style="font-size:20px;font-weight:600">Monthly visitors</div>
+            <svg class="abs" style="left:28px;top:70px" width="1200" height="370" viewBox="0 0 1200 370">
+              <defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity=".28"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>
+              <g stroke="#eef0f5" stroke-width="2"><line x1="0" y1="60" x2="1200" y2="60"/><line x1="0" y1="150" x2="1200" y2="150"/><line x1="0" y1="240" x2="1200" y2="240"/><line x1="0" y1="330" x2="1200" y2="330"/></g>
+              <path id="area" d="" fill="url(#fill)"/>
+              <path id="line" d="" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle id="pt" r="11" fill="#fff" stroke="#2563eb" stroke-width="5"/>
+            </svg>
+          </div>
+          <div id="tip" class="abs"><span style="opacity:.7">September</span><b>21,940</b></div>
+          <div id="toast" class="abs"><i>✓</i>Link copied to clipboard</div>
+        </div>
+        <div id="ripple" class="abs"></div>
+        <svg id="cursor" class="abs" viewBox="0 0 34 50"><path d="M3 2 L3 38 L12 30 L18.5 45 L25 42.2 L18.6 27.6 L31 27.6 Z" fill="#111" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div id="cam" class="abs"></div>
+    <div id="captions" class="abs"></div>
+  </div>
+
+  <div id="ftitle" class="abs">Everything after the recording</div>
+  <div id="features" class="abs"></div>
+
+  <div id="end" class="abs">
+    <img src="../../build/icon.png" alt="">
+    <h2>DirectZoom</h2>
+    <p>Free and open source · Windows 10 and 11</p>
+    <div class="pill">github.com/MrFr0g-X/DirectZoom</div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, p) => a + (b - a) * p;
+const prog = (t, a, b) => clamp((t - a) / (b - a));
+const inOut = p => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+const out = p => 1 - Math.pow(1 - p, 3);
+const outBack = p => { const c = 1.6; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+// Critically damped spring from 0 to 1 starting at `a` (seconds).
+const spring = (t, a, w = 9) => { const x = Math.max(0, t - a); return 1 - (1 + w * x) * Math.exp(-w * x); };
+
+// The opening (paid recorders crossed out) runs first; the product scenes follow.
+const INTRO = 3.6;
+const DURATION = 15 + INTRO;
+
+// ---- Build static parts ----
+// Generic app tiles: abstract gradients and simple shapes, blurred, so no real product is shown.
+const tiles = [
+  ['linear-gradient(135deg,#ff6b6b,#c0392b)', '<circle cx="85" cy="85" r="34" fill="#fff"/>', '$29/mo'],
+  ['linear-gradient(135deg,#6c5ce7,#341f97)', '<path d="M68 55 L118 85 L68 115 Z" fill="#fff"/>', '$89/yr'],
+  ['linear-gradient(135deg,#00b894,#006b55)', '<rect x="48" y="62" width="58" height="46" rx="10" fill="#fff"/><path d="M106 78 L126 66 L126 104 L106 92 Z" fill="#fff"/>', '$19/mo'],
+  ['linear-gradient(135deg,#fdcb6e,#e17055)', '<path d="M62 50 L62 120 L80 104 L92 128 L104 122 L92 98 L116 98 Z" fill="#fff"/>', '$59'],
+  ['linear-gradient(135deg,#0984e3,#2d3436)', '<rect x="44" y="56" width="82" height="58" rx="8" fill="none" stroke="#fff" stroke-width="10"/><circle cx="85" cy="85" r="10" fill="#fff"/>', '$12/mo'],
+];
+tiles.forEach(([bg, glyph, price]) => {
+  const el = document.createElement('div');
+  el.className = 'pw-app';
+  el.innerHTML = `<div class="pw-icon" style="background:${bg}"><i><svg width="170" height="170" viewBox="0 0 170 170">${glyph}</svg></i></div><div class="pw-price">${price}<span class="pw-strike"></span></div>`;
+  $('pwApps').appendChild(el);
+});
+
+'DirectZoom'.split('').forEach(ch => { const s = document.createElement('span'); s.textContent = ch; $('word').appendChild(s); });
+
+// Chart line
+const data = [120, 150, 138, 182, 176, 214, 236, 228, 290, 268, 312, 330];
+const X = i => 40 + i * 100, Y = v => 330 - (v - 100) * 0.95;
+const pts = data.map((v, i) => [X(i), Y(v)]);
+let d = `M${pts[0][0]},${pts[0][1]}`;
+for (let i = 1; i < pts.length; i++) { const [x0, y0] = pts[i - 1], [x1, y1] = pts[i]; const cx = (x0 + x1) / 2; d += ` C${cx},${y0} ${cx},${y1} ${x1},${y1}`; }
+$('line').setAttribute('d', d);
+$('area').setAttribute('d', `${d} L${pts.at(-1)[0]},360 L${pts[0][0]},360 Z`);
+const POINT = 8; // September
+$('pt').setAttribute('cx', pts[POINT][0]); $('pt').setAttribute('cy', pts[POINT][1]);
+// Chart point in content coordinates (main at 250,56; chart at 44,306; svg at 28,70)
+const chartPt = [250 + 44 + 28 + pts[POINT][0], 56 + 306 + 70 + pts[POINT][1]];
+$('tip').style.left = `${chartPt[0] - 250 - 95}px`; $('tip').style.top = `${chartPt[1] - 56 - 110}px`;
+const sharePt = [250 + 1123 + 93, 56 + 40 + 26];
+
+const words = 'Zooms follow your cursor automatically'.split(' ');
+words.forEach(w => { const s = document.createElement('span'); s.textContent = w; $('captions').appendChild(s); });
+
+const icons = {
+  zoom: '<path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4"/><circle cx="12" cy="12" r="3"/>',
+  cursor: '<path d="M5 3l14 7-6 2-2 6z"/>',
+  captions: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 12h3M14 12h3M7 15h10"/>',
+  cam: '<circle cx="12" cy="10" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+  layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+  export: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/>',
+};
+const features = [
+  ['zoom', 'Automatic zooms', 'Follow every click'],
+  ['cursor', 'Smooth cursor', 'Restyle it after recording'],
+  ['captions', 'Captions & voiceover', 'Online or fully offline'],
+  ['cam', 'Webcam bubble', 'Shapes, borders, keyframes'],
+  ['layers', 'Backgrounds & 3D', 'Wallpapers, blur, annotations'],
+  ['export', 'Export up to 4K60', 'MP4, WebM, GIF, Drive'],
+];
+features.forEach(([icon, title, text], i) => {
+  const el = document.createElement('div');
+  el.className = 'feat';
+  el.style.left = `${(i % 2) * 384}px`; el.style.top = `${Math.floor(i / 2) * 174}px`;
+  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons[icon]}</svg><h3>${title}</h3><p>${text}</p>`;
+  $('features').appendChild(el);
+});
+
+// ---- Timeline ----
+// Cursor keyframes in content coordinates (1600×900): [time, x, y]
+const path = [[2.4, 1500, 860], [3.5, sharePt[0] - 62, sharePt[1] + 6], [5.3, sharePt[0] - 62, sharePt[1] + 6], [6.5, chartPt[0], chartPt[1]], [9, chartPt[0], chartPt[1]]];
+function cursorAt(t) {
+  if (t <= path[0][0]) return [path[0][1], path[0][2]];
+  for (let i = 1; i < path.length; i++) {
+    const [t0, x0, y0] = path[i - 1], [t1, x1, y1] = path[i];
+    if (t <= t1) { const p = inOut(prog(t, t0, t1)); const arc = Math.sin(p * Math.PI) * 60; return [lerp(x0, x1, p), lerp(y0, y1, p) - arc]; }
+  }
+  return [path.at(-1)[1], path.at(-1)[2]];
+}
+const CLICKS = [3.75, 6.75];
+
+function camera(t) {
+  // Zoom in at the first click, follow the cursor, zoom out before the features scene.
+  const zin = spring(t, 3.45, 6.5), zout = inOut(prog(t, 7.9, 8.8));
+  const amount = clamp(zin - zout);
+  const scale = 1 + 0.85 * amount;
+  const [cx, cy] = cursorAt(t);
+  const follow = spring(t, 5.25, 4.5);
+  const fx = lerp(sharePt[0] - 150, cx, follow), fy = lerp(sharePt[1] + 120, cy, follow);
+  return { scale, fx: lerp(800, fx, amount), fy: lerp(450, fy, amount) };
+}
+
+function render(t) {
+  // Opening (0 – INTRO s): "Still paying…?" over blurred paid apps, prices struck out, "Stop paying."
+  const titleIn = out(prog(t, 0.1, 0.6)), away = inOut(prog(t, 2.25, 2.75));
+  $('paywall').style.opacity = titleIn * (1 - away);
+  $('pwTitle').style.transform = `translateY(${(1 - titleIn) * 30}px)`;
+  [...$('pwApps').children].forEach((app, i) => {
+    const p = spring(t, 0.35 + i * 0.12, 9);
+    const strike = out(prog(t, 1.45 + i * 0.1, 1.75 + i * 0.1));
+    app.style.opacity = clamp(p * 1.4);
+    app.style.transform = `translateY(${(1 - p) * 60 + away * 120}px) scale(${0.9 + 0.1 * p - 0.08 * strike})`;
+    const price = app.querySelector('.pw-price');
+    price.style.opacity = 1 - 0.55 * strike;
+    const line = app.querySelector('.pw-strike');
+    line.style.width = `calc(100% + 16px)`;
+    line.style.transform = `translateY(-50%) rotate(-8deg) scaleX(${strike})`;
+  });
+  const stop = spring(t, 2.55, 8) * (1 - inOut(prog(t, INTRO - 0.45, INTRO)));
+  $('pwStop').style.opacity = clamp(stop * 1.3);
+  $('pwStop').style.transform = `translateY(-50%) scale(${0.85 + 0.15 * stop})`;
+  renderMain(Math.max(0, t - INTRO));
+}
+
+function renderMain(t) {
+  const W = 1920, H = 1080;
+  // Ambient
+  $('glow1').style.transform = `translate(${-350 + Math.sin(t * 0.4) * 120}px, ${-500 + Math.cos(t * 0.3) * 80}px)`;
+  $('glow2').style.transform = `translate(${900 + Math.cos(t * 0.35) * 140}px, ${200 + Math.sin(t * 0.45) * 90}px)`;
+
+  // Intro (0 – 2.4 s)
+  const introOut = inOut(prog(t, 1.9, 2.5));
+  const logo = spring(t, 0.15, 7);
+  $('intro').style.opacity = 1 - introOut;
+  $('intro').style.transform = `translateY(${-introOut * 120}px) scale(${1 - introOut * 0.08})`;
+  $('logo').style.transform = `scale(${0.5 + 0.5 * logo}) rotate(${(1 - logo) * -14}deg)`;
+  $('logo').style.opacity = clamp(logo * 1.6);
+  [...$('word').children].forEach((s, i) => { const p = out(prog(t, 0.55 + i * 0.045, 0.95 + i * 0.045)); s.style.opacity = p; s.style.transform = `translateY(${(1 - p) * 34}px)`; });
+  const tg = out(prog(t, 1.05, 1.5)); $('tag').style.opacity = tg; $('tag').style.transform = `translateY(${(1 - tg) * 18}px)`;
+  const fr = spring(t, 1.35, 9); $('free').style.opacity = clamp(fr * 1.3); $('free').style.transform = `scale(${0.85 + 0.15 * fr})`;
+
+  // Frame enters (2.1 – 2.9 s), shrinks aside for features (9 – 9.9 s), leaves (11.9 – 12.5 s)
+  const fin = spring(t, 2.05, 6.5);
+  const aside = inOut(prog(t, 9.0, 9.9));
+  const fout = inOut(prog(t, 11.9, 12.5));
+  const fScale = lerp(1, 0.56, aside) * lerp(0.9, 1, fin);
+  const fx = lerp(0, -470, aside), fy = lerp(140, 0, fin) + lerp(0, 40, aside);
+  $('frame').style.opacity = clamp(fin * 1.4) * (1 - fout);
+  $('frame').style.transform = `translate(${fx}px, ${fy}px) scale(${fScale * (1 - fout * 0.06)})`;
+
+  // Camera
+  const cam = camera(t);
+  const SW = 1600, SH = 900;
+  let tx = SW / 2 - cam.fx * cam.scale, ty = SH / 2 - cam.fy * cam.scale;
+  tx = clamp(tx, SW - SW * cam.scale, 0); ty = clamp(ty, SH - SH * cam.scale, 0);
+  const base = 1388 / 1600;
+  $('content').style.transform = `scale(${base}) translate(${tx}px, ${ty}px) scale(${cam.scale})`;
+
+  // Cursor + clicks
+  const [cx, cy] = cursorAt(t);
+  const press = CLICKS.reduce((m, c) => Math.max(m, 1 - Math.abs(t - c) / 0.12), 0);
+  $('cursor').style.transform = `translate(${cx - 3}px, ${cy - 2}px) scale(${1.25 * (1 - 0.18 * clamp(press))})`;
+  $('cursor').style.opacity = clamp(prog(t, 2.35, 2.6)) * (1 - prog(t, 8.8, 9.1));
+  const lastClick = CLICKS.filter(c => t >= c).at(-1);
+  if (lastClick !== undefined && t - lastClick < 0.6) {
+    const p = out((t - lastClick) / 0.6);
+    const [rx, ry] = cursorAt(lastClick);
+    $('ripple').style.display = 'block';
+    $('ripple').style.transform = `translate(${rx - 45}px, ${ry - 45}px) scale(${0.3 + p * 0.9})`;
+    $('ripple').style.opacity = 1 - p;
+  } else $('ripple').style.display = 'none';
+  const sharePress = 1 - Math.abs(t - CLICKS[0]) / 0.15;
+  $('share').style.transform = `scale(${1 - 0.05 * clamp(sharePress)})`;
+  $('share').style.background = t > CLICKS[0] && t < CLICKS[0] + 0.25 ? '#1d4ed8' : '#111827';
+  const toast = spring(t, CLICKS[0] + 0.2, 10) * (1 - inOut(prog(t, 5.6, 5.9)));
+  $('toast').style.opacity = toast; $('toast').style.transform = `translateY(${(1 - toast) * 24}px)`;
+  const tip = spring(t, CLICKS[1] + 0.05, 11);
+  $('tip').style.opacity = tip; $('tip').style.transform = `translateY(${(1 - tip) * 14}px) scale(${0.9 + 0.1 * tip})`;
+  $('pt').setAttribute('r', 11 + 5 * clamp(spring(t, CLICKS[1], 12) - prog(t, 7.4, 8)));
+
+  // Captions: word-by-word highlight (3.0 – 7.8 s)
+  const cIn = out(prog(t, 2.9, 3.2)) * (1 - prog(t, 8.0, 8.3));
+  $('captions').style.opacity = cIn;
+  $('captions').style.transform = `translateX(-50%) translateY(${(1 - cIn) * 16}px)`;
+  [...$('captions').children].forEach((s, i) => {
+    const on = t >= 3.2 + i * 0.55;
+    s.style.color = on ? '#fff' : 'rgba(255,255,255,.38)';
+    const pop = clamp(1 - Math.abs(t - (3.2 + i * 0.55)) / 0.18);
+    s.style.transform = `translateY(${-pop * 4}px)`;
+    s.style.display = 'inline-block';
+    s.style.textShadow = on ? '0 0 22px rgba(10,132,255,.55)' : 'none';
+  });
+
+  // Webcam bubble (5.0 s)
+  const camIn = spring(t, 4.9, 9) * (1 - prog(t, 8.6, 8.9));
+  $('cam').style.opacity = clamp(camIn * 1.5);
+  $('cam').style.transform = `scale(${0.6 + 0.4 * camIn})`;
+
+  // Features (9.4 – 12.2 s)
+  const ft = out(prog(t, 9.4, 9.9)) * (1 - inOut(prog(t, 11.9, 12.4)));
+  $('ftitle').style.opacity = ft; $('ftitle').style.transform = `translateX(${(1 - ft) * 40}px)`;
+  [...$('features').children].forEach((el, i) => {
+    const p = spring(t, 9.6 + i * 0.12, 9) * (1 - inOut(prog(t, 11.9 + i * 0.03, 12.4 + i * 0.03)));
+    el.style.opacity = clamp(p * 1.3);
+    el.style.transform = `translateY(${(1 - p) * 50}px) scale(${0.94 + 0.06 * p})`;
+  });
+
+  // End card (12.4 – 15 s), fades out at the very end so the GIF loops cleanly
+  const e = spring(t, 12.4, 7) * (1 - inOut(prog(t, 14.4, 15)));
+  $('end').style.opacity = clamp(e * 1.4);
+  $('end').style.transform = `scale(${0.92 + 0.08 * e})`;
+
+  // Fit 1920×1080 into the window
+  $('stage').style.transform = `scale(${Math.min(innerWidth / W, innerHeight / H)})`;
+}
+
+window.render = render;
+window.DURATION = DURATION;
+if (!navigator.webdriver && !window.__renderer && !location.search.includes('render')) {
+  const start = performance.now();
+  const loop = () => { if (window.__renderer) return; render(((performance.now() - start) / 1000) % DURATION); requestAnimationFrame(loop); };
+  document.fonts.ready.then(() => requestAnimationFrame(loop));
+}
+</script>
+</body>
+</html>
