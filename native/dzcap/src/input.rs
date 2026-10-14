@@ -251,6 +251,10 @@ impl Tracker {
 
         let mut modifiers = Modifiers::default();
         let mut held = std::collections::HashSet::new();
+        // Privacy: only shortcuts are kept. Plain typing (including Shift+letter) never reaches
+        // keyboard.json; a key is kept when Ctrl, Alt or Win is held as it goes down, together
+        // with its matching release.
+        let mut kept = std::collections::HashSet::new();
         let keys = std::mem::take(&mut *KEYS.lock().unwrap()).into_iter().filter_map(|key| {
             let is_modifier = matches!(key.vk, 0x10 | 0xA0 | 0xA1 | 0x11 | 0xA2 | 0xA3 | 0x12 | 0xA4 | 0xA5 | 0x5B | 0x5C);
             match key.vk {
@@ -261,6 +265,11 @@ impl Tracker {
             if key.down && !held.insert(key.vk) { return None; }
             if !key.down { held.remove(&key.vk); }
             if key.t < t0 { return None; }
+            let shortcut = modifiers.ctrl || modifiers.alt || modifiers.meta;
+            if !is_modifier {
+                if key.down { if !shortcut { return None; } kept.insert(key.vk); }
+                else if !kept.remove(&key.vk) { return None; }
+            }
             Some(KeyEvent {
                 t: (key.t - t0) / 10_000, event: if key.down { "down" } else { "up" },
                 key: key_name(key.vk, key.scan, key.extended), key_code: key.vk, is_modifier, modifiers,

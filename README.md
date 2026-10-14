@@ -44,7 +44,7 @@ Windows may show a SmartScreen notice for new, unsigned apps: choose **More info
 **Recording**
 
 - Display, window (only the window's own content, even when covered) or area capture with Windows Graphics Capture
-- System audio and a chosen microphone (WASAPI), webcam (optional floating preview while recording) and keystrokes
+- System audio and a chosen microphone (WASAPI), webcam (optional floating preview while recording) and keyboard shortcuts (only key combinations with Ctrl, Alt or Win are saved, never ordinary typing)
 - Cursor position, clicks and keys are timed on the same clock as the video, so everything stays in sync
 - DirectZoom's own windows never appear in the recording
 
