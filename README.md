@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/MrFr0g-X/DirectZoom/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/MrFr0g-X/DirectZoom?style=flat-square&color=0a84ff&label=release"></a>
-  <a href="https://github.com/MrFr0g-X/DirectZoom/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/MrFr0g-X/DirectZoom/total?style=flat-square&color=0a84ff"></a>
+  <a href="https://github.com/MrFr0g-X/DirectZoom/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/MrFr0g-X/DirectZoom/total?style=flat-square&color=0a84ff&cacheSeconds=3600"></a>
   <a href="https://github.com/MrFr0g-X/DirectZoom/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/MrFr0g-X/DirectZoom/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0a84ff?style=flat-square&logo=windows&logoColor=white">
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-0a84ff?style=flat-square"></a>
