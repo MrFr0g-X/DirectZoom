@@ -36,6 +36,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Electron downloads its binary on first use; fetch it once here so parallel tests
+      # never race to unpack it.
+      - name: Download Electron
+        run: npx install-electron --no
+
       - name: Type-check and build the interface
         run: npm run build
 
