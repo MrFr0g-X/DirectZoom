@@ -106,7 +106,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^6.1.2",
-    "electron": "44.7.2",
+    "electron": "44.9.1",
     "electron-builder": "^26.15.3",
     "lucide-react": "^1.55.0",
     "mp4-muxer": "^5.2.2",
